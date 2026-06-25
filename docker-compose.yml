@@ -7,6 +7,12 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: govwifi_test
+    healthcheck:
+      test: ["CMD-SHELL", "mysql -h localhost -u root -proot -e 'SELECT 1'"]
+      interval: 10s
+      timeout: 30s
+      retries: 10
+      start_period: 10s
     expose:
       - "3306"
 
@@ -21,6 +27,11 @@ services:
       - DEFAULT_REGION=eu-west-1
       - AWS_ACCESS_KEY_ID=testkey
       - AWS_SECRET_ACCESS_KEY=testsecret
+    healthcheck:
+      test: ["CMD-SHELL", "awslocal s3api head-bucket --bucket backup-bucket"]
+      interval: 10s
+      timeout: 30s
+      retries: 10
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
       - s3-data:/tmp/localstack
@@ -28,8 +39,10 @@ services:
   app:
     build: .
     depends_on:
-     - db
-     - fake-s3
+      db:
+        condition: service_healthy
+      fake-s3:
+        condition: service_healthy
     environment:
       WIFI_DB_NAME: govwifi_test
       WIFI_DB_PASS: root
